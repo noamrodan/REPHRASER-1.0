@@ -1,0 +1,760 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#fff8e9">
+  <title>rephraser 1.0 — A different way to read it</title>
+  <style>
+    :root {
+      color-scheme: light;
+      font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+      font-synthesis: none;
+      text-rendering: optimizeLegibility;
+      -webkit-font-smoothing: antialiased;
+      --ink: #263d35;
+      --muted: #718078;
+      --paper: #fffdf7;
+      --line: #e8e8d9;
+      --accent: #bd8050;
+      --accent-strong: #98613e;
+      --shadow: 0 22px 65px rgba(48, 47, 42, .09);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      min-width: 320px;
+      min-height: 100vh;
+      margin: 0;
+      color: var(--ink);
+      background:
+        radial-gradient(ellipse at 8% 10%, rgba(255, 215, 136, .42), transparent 34rem),
+        radial-gradient(ellipse at 95% 85%, rgba(157, 208, 173, .35), transparent 32rem),
+        #fff8e9;
+      transition: background .4s ease, color .4s ease;
+    }
+
+    body.gloomy {
+      color-scheme: dark;
+      --ink: #e7e8ef;
+      --muted: #a0a5b7;
+      --paper: #252a38;
+      --line: #3a4051;
+      --accent: #98a0b2;
+      --accent-strong: #bac1d1;
+      --shadow: 0 22px 65px rgba(0, 0, 0, .25);
+      background:
+        radial-gradient(ellipse at 12% 8%, rgba(81, 91, 124, .26), transparent 36rem),
+        radial-gradient(ellipse at 95% 90%, rgba(53, 70, 87, .28), transparent 32rem),
+        #191d28;
+    }
+
+    button, textarea { font: inherit; }
+    button { color: inherit; }
+
+    .site-header {
+      width: min(1120px, calc(100% - 48px));
+      margin: 0 auto;
+      padding: 28px 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--ink);
+      font-size: 15px;
+      font-weight: 800;
+      letter-spacing: -.03em;
+      text-decoration: none;
+    }
+
+    .brand-mark {
+      width: 31px;
+      height: 31px;
+      display: grid;
+      place-items: center;
+      border-radius: 11px;
+      color: #fff;
+      background: linear-gradient(145deg, #f8c667, #eb8a58);
+      font-size: 18px;
+      box-shadow: 0 5px 14px rgba(223, 129, 68, .25);
+    }
+
+    main {
+      width: min(760px, calc(100% - 36px));
+      margin: clamp(32px, 8vh, 84px) auto 70px;
+    }
+
+    .intro {
+      position: relative;
+      text-align: center;
+    }
+
+    .weather {
+      width: 52px;
+      height: 52px;
+      position: absolute;
+      top: 4px;
+      right: 9%;
+      display: grid;
+      place-items: center;
+      border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
+      border-radius: 50%;
+      color: var(--accent-strong);
+      background: color-mix(in srgb, var(--paper) 60%, transparent);
+      font-size: 25px;
+      transition: color .35s ease, transform .35s ease;
+    }
+
+    .weather::after {
+      position: absolute;
+      right: -14px;
+      bottom: -7px;
+      content: "✿";
+      color: #a4a96b;
+      font-size: 15px;
+      transition: color .35s ease, content .35s ease;
+    }
+
+    .gloomy .weather {
+      transform: translateY(3px);
+    }
+
+    .gloomy .weather::after {
+      content: "·  ·";
+      right: -12px;
+      bottom: -11px;
+      color: #9aa8c2;
+      font-size: 20px;
+      letter-spacing: 2px;
+    }
+
+    h1 {
+      margin: 0;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: clamp(39px, 7vw, 63px);
+      font-weight: 500;
+      letter-spacing: -.055em;
+      line-height: 1.05;
+    }
+
+    .switcher {
+      display: inline-flex;
+      gap: 5px;
+      padding: 5px;
+      margin: 27px 0 19px;
+      border: 1px solid var(--line);
+      border-radius: 15px;
+      background: color-mix(in srgb, var(--paper) 82%, transparent);
+      box-shadow: 0 5px 20px rgba(43, 53, 44, .05);
+    }
+
+    .mode-button {
+      min-height: 42px;
+      padding: 0 17px;
+      border: 0;
+      border-radius: 11px;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 700;
+      transition: background .2s ease, color .2s ease, transform .2s ease;
+    }
+
+    .mode-button:hover { transform: translateY(-1px); }
+    .mode-button[aria-pressed="true"] { color: #604522; background: #ffe8b5; }
+    .gloomy .mode-button[aria-pressed="true"] { color: #f1f1f7; background: #454d64; }
+
+    .card {
+      overflow: hidden;
+      border: 1px solid color-mix(in srgb, var(--line) 75%, transparent);
+      border-radius: 23px;
+      background: var(--paper);
+      box-shadow: var(--shadow);
+      text-align: left;
+      transition: background .35s ease, border-color .35s ease;
+    }
+
+    .card-top {
+      min-height: 61px;
+      padding: 17px 22px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .card-label {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .mood-icon { font-size: 17px; }
+
+    .limit-note {
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .input-area { padding: 19px 22px 18px; }
+
+    textarea {
+      width: 100%;
+      min-height: 150px;
+      padding: 3px 0;
+      resize: vertical;
+      border: 0;
+      outline: 0;
+      color: var(--ink);
+      background: transparent;
+      font-size: 15px;
+      line-height: 1.75;
+    }
+
+    textarea::placeholder { color: color-mix(in srgb, var(--muted) 72%, transparent); }
+
+    .input-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .word-count {
+      color: var(--muted);
+      font-size: 11px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .word-count.over { color: #d35c50; font-weight: 700; }
+
+    .rewrite-button {
+      min-height: 45px;
+      padding: 0 18px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 9px;
+      border: 0;
+      border-radius: 13px;
+      color: #fff;
+      background: linear-gradient(135deg, #e9a448, #e88053);
+      box-shadow: 0 7px 18px rgba(219, 133, 69, .25);
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 800;
+      transition: transform .2s ease, opacity .2s ease;
+    }
+
+    .gloomy .rewrite-button {
+      background: linear-gradient(135deg, #687899, #596680);
+      box-shadow: 0 7px 18px rgba(31, 39, 57, .4);
+    }
+
+    .rewrite-button:hover:not(:disabled) { transform: translateY(-2px); }
+    .rewrite-button:disabled { cursor: not-allowed; opacity: .45; box-shadow: none; }
+
+    .examples {
+      margin: 16px 0 0;
+      color: var(--muted);
+      font-size: 11px;
+      text-align: center;
+    }
+
+    .example-button {
+      padding: 0;
+      border: 0;
+      border-bottom: 1px dotted currentColor;
+      color: var(--accent-strong);
+      background: transparent;
+      cursor: pointer;
+      font-size: inherit;
+    }
+
+    .result {
+      display: none;
+      margin-top: 18px;
+      padding: 22px 24px 19px;
+      border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--line));
+      border-radius: 20px;
+      background: color-mix(in srgb, var(--accent) 8%, var(--paper));
+      animation: rise .35s ease both;
+    }
+
+    .result.visible { display: block; }
+
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .result-heading {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+      color: var(--accent-strong);
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: .11em;
+      text-transform: uppercase;
+    }
+
+    .copy-button {
+      padding: 5px 0 5px 8px;
+      border: 0;
+      color: var(--muted);
+      background: transparent;
+      cursor: pointer;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0;
+      text-transform: none;
+    }
+
+    .copy-button:hover { color: var(--ink); }
+
+    .result-text {
+      margin: 0;
+      color: var(--ink);
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 17px;
+      line-height: 1.75;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+
+    @media (max-width: 540px) {
+      .site-header { width: calc(100% - 32px); padding: 20px 0; }
+      main { margin-top: 32px; }
+      .weather { width: 40px; height: 40px; top: -17px; right: 3%; font-size: 20px; }
+      .mode-button { padding: 0 12px; font-size: 12px; }
+      .card-top { padding: 15px 17px; }
+      .input-area { padding: 17px; }
+      .result { padding: 19px 18px 17px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="#" aria-label="rephraser 1.0 home">
+      <span class="brand-mark" aria-hidden="true">R</span>
+      <span>rephraser 1.0</span>
+    </a>
+  </header>
+
+  <main>
+    <section class="intro" aria-labelledby="page-title">
+      <h1 id="page-title">Tell me what's<br>going on.</h1>
+      <span class="weather" id="weather" aria-hidden="true">☀</span>
+
+      <div class="switcher" role="group" aria-label="Choose a perspective">
+        <button class="mode-button" id="hopeful-tab" type="button" aria-pressed="true">Optimistic rephrase</button>
+        <button class="mode-button" id="gloomy-tab" type="button" aria-pressed="false">Pessimistic rephrase</button>
+      </div>
+    </section>
+
+    <section class="card" aria-label="Rephrase your thought">
+      <div class="card-top">
+        <div class="card-label"><span class="mood-icon" id="mood-icon" aria-hidden="true">☀</span><span>Your version</span></div>
+        <span class="limit-note">Up to 120 words</span>
+      </div>
+      <div class="input-area">
+        <textarea id="thought" maxlength="1200" aria-label="Your thought" placeholder="Type a paragraph here…"></textarea>
+        <div class="input-footer">
+          <span class="word-count" id="word-count" aria-live="polite">0 / 120 words</span>
+          <button class="rewrite-button" id="rewrite" type="button" disabled><span id="button-icon">↗</span><span id="button-label">Rephrase</span></button>
+        </div>
+      </div>
+    </section>
+
+    <p class="examples">Try <button class="example-button" id="example" type="button">“I didn't get the job I wanted.”</button></p>
+
+    <section class="result" id="result" aria-live="polite" aria-labelledby="result-heading">
+      <div class="result-heading"><span id="result-heading">Optimistic rephrase</span><button class="copy-button" id="copy" type="button">Copy text</button></div>
+      <p class="result-text" id="result-text"></p>
+    </section>
+
+  </main>
+
+  <script>
+    const MAX_WORDS = 120;
+    const input = document.querySelector("#thought");
+    const count = document.querySelector("#word-count");
+    const rewriteButton = document.querySelector("#rewrite");
+    const result = document.querySelector("#result");
+    const resultText = document.querySelector("#result-text");
+    const hopefulTab = document.querySelector("#hopeful-tab");
+    const gloomyTab = document.querySelector("#gloomy-tab");
+    let mode = "hopeful";
+
+    const replacements = {
+      hopeful: [
+        [/\bmissed the (train|bus|flight) by a minute\b/gi, "came within a mere minute of catching the $1"],
+        [/\bhad to run to\b/gi, "got a brisk little sprint to"],
+        [/\b(and )?was late anyway and (?:also )?(?:felt |was )?sweaty\b/gi, "$1arrived fashionably late anyway, impressively sweaty"],
+        [/\bwas late anyway\b/gi, "arrived fashionably late anyway"],
+        [/\bdidn't get the job\b/gi, "didn't happen to get the job"],
+        [/\bdid not get the job\b/gi, "didn't happen to get the job"],
+        [/\bfailed\b/gi, "made a valiant attempt and still failed"],
+        [/\bfailure\b/gi, "minor setback"],
+        [/\bterrible\b/gi, "not ideal, but hardly the end of the world"],
+        [/\bawful\b/gi, "not ideal, but hardly the end of the world"],
+        [/\bdisaster\b/gi, "minor setback"],
+        [/\bproblems\b/gi, "tiny little problems"],
+        [/\bproblem\b/gi, "tiny little problem"],
+        [/\bmistakes\b/gi, "minor missteps"],
+        [/\bmistake\b/gi, "minor misstep"],
+        [/\bworried about\b/gi, "a little concerned about"],
+        [/\bwrong\b/gi, "off"]
+      ],
+      gloomy: [
+        [/\bmissed the (train|bus|flight) by a minute\b/gi, "missed the $1 by one maddening minute"],
+        [/\bhad to run to\b/gi, "had to scramble all the way to"],
+        [/\b(and )?was late anyway and (?:also )?(?:felt |was )?sweaty\b/gi, "$1still arrived late anyway, spectacularly sweaty"],
+        [/\bwas late anyway\b/gi, "was still late anyway, naturally"],
+        [/\bdidn't get the job\b/gi, "failed to get the job"],
+        [/\bdid not get the job\b/gi, "failed to get the job"],
+        [/\bsucceeded\b/gi, "barely scraped through"],
+        [/\bsuccessful\b/gi, "barely successful"],
+        [/\bfailed\b/gi, "spectacularly failed"],
+        [/\bfailure\b/gi, "spectacular failure"],
+        [/\bgreat\b/gi, "suspiciously good"],
+        [/\bexcited\b/gi, "bracing for disappointment about"],
+        [/\blucky\b/gi, "a statistical fluke"],
+        [/\bperfect\b/gi, "one flaw away from a mess"],
+        [/\bproblems\b/gi, "fresh hassles"],
+        [/\bproblem\b/gi, "fresh hassle"],
+        [/\bmistakes\b/gi, "avoidable blunders"],
+        [/\bmistake\b/gi, "avoidable blunder"]
+      ]
+    };
+
+    function wordCount(text) {
+      const words = text.trim().match(/\S+/g);
+      return words ? words.length : 0;
+    }
+
+    function transform(text, perspective) {
+      let output = text.trim();
+      for (const [pattern, replacement] of replacements[perspective]) {
+        output = output.replace(pattern, replacement);
+      }
+
+      const isSetback = /\b(didn't|did not|can't|cannot|failed|failure|rejected|turned down|passed over|missed out|missed|late|lost|wrong|problem|problems|mistake|mistakes|cancelled|canceled|broke|broken|stuck|worried|awful|terrible|disaster|bad|low grade|poor grade|broke up|dumped|ghosted|cheated|argument|fight|forgot|sick|hurt|injured|damaged|lost|overdue|short|ran out)\b/i.test(text);
+      const isWin = /\b(got the job|got hired|hired|promoted|promotion|accepted|passed|aced|good grade|great grade|succeeded|success|won|went well|said yes|engaged|married|reconciled|made up|caught the train|caught the bus|on time|finished|completed|fixed|recovered|saved|earned|paid off)\b/i.test(text);
+      const isCarTrouble = /\b(car|vehicle|truck|van)\b/i.test(text) && /\b(broke|broken|stalled|flat tire|puncture|wouldn't start|would not start)\b/i.test(text);
+      let hash = 0;
+      const normalized = text.toLowerCase();
+      for (let index = 0; index < normalized.length; index += 1) {
+        hash = (hash * 31 + normalized.charCodeAt(index)) >>> 0;
+      }
+      function choose(lines) {
+        return lines[hash % lines.length];
+      }
+
+      if (isCarTrouble) {
+        const carLines = perspective === "hopeful"
+          ? [
+              " And apparently I get an unscheduled roadside break, a story for later, and a chance to discover whether my insurance or my emergency snacks are more useful.",
+              " And now I get to learn a little about cars, accept a lift, and appreciate the next trip where the engine starts without a dramatic announcement.",
+              " And look at that, a forced pause, a new mechanic contact, and a very convincing reason to let someone else handle the driving for a while."
+            ]
+          : [
+              " And now the trip is delayed, the repair bill is warming up, and the campsite is starting to feel more theoretical by the minute.",
+              " And apparently I get roadside waiting, an unexpected repair, and the exciting task of rearranging every plan that depended on the car.",
+              " And there goes the schedule, plus the money and time required to make the car remember its one job."
+            ];
+        return output + choose(carLines);
+      }
+      const topic = /\b(job|position|role|interview|hiring|career|application|offer|workplace|promotion|boss|coworker|colleague)\b/i.test(text) ? "work"
+        : /\b(pottery|ceramic|painting|drawing|artwork|craft|knitting|sewing|guitar|piano|music|photography|writing|novel|poem|gardening|hobby|hobbies)\b/i.test(text) ? "creative"
+          : /\b(school|study|studying|exam|test|classroom|grade|teacher|university|college|homework|course|assignment|degree|lecture)\b/i.test(text) ? "school"
+            : /\b(project|deadline|presentation|report|proposal|portfolio|experiment|research)\b/i.test(text) ? "projects"
+              : /\b(relationship|partner|girlfriend|boyfriend|date|dating|crush|breakup|broke up|divorce|married|romance|romantic|spouse|ex\b|ghosted|cheated|friend|friendship)\b/i.test(text) ? "relationships"
+            : /\b(dog|cat|puppy|kitten|pet|vet|veterinarian|horse|bird|fish)\b/i.test(text) ? "pets"
+              : /\b(train|bus|flight|ferry|subway|tram|station|commute|traffic|taxi|uber|travel|trip|vacation|journey|car|driving|campsite|camping|road)\b/i.test(text) ? "travel"
+                : /\b(money|cash|rent|bill|bills|paycheck|salary|budget|debt|price|cost|bought|purchase|shopping|refund|bank|credit card)\b/i.test(text) ? "money"
+                  : /\b(lunch|breakfast|dinner|food|meal|restaurant|recipe|cooking|baking|coffee|cake|groceries|hungry)\b/i.test(text) ? "food"
+                    : /\b(phone|computer|laptop|internet|website|app|software|printer|device|password|file|account|battery)\b/i.test(text) ? "technology"
+                      : /\b(home|house|apartment|room|kitchen|plumbing|furniture|neighbor|garden|yard|moving)\b/i.test(text) ? "home"
+                        : /\b(doctor|health|sick|illness|pain|hospital|appointment|injury|injured|medicine|medication|sleep|tired|workout|exercise)\b/i.test(text) ? "health"
+                          : /\b(soccer|football|basketball|baseball|tennis|match|tournament|team|race|racing|sport|sports|practice|workout|game)\b/i.test(text) ? "sports"
+                            : /\b(family|parent|mother|mom|father|dad|sister|brother|child|children|kid|kids|birthday|party|concert|movie|cinema|film|show|event|plan|plans)\b/i.test(text) ? "plans"
+                              : "other";
+
+      const variations = {
+        work: {
+          setback: {
+            hopeful: [
+              " And apparently I have been spared the commute and the meetings-that-could-have-been-emails lifestyle; I get my evenings back and another shot at a role that fits.",
+              " And now my calendar has room for hobbies again, while my career gets to take a less obvious route. Inconvenient, but at least I don't have to pretend that job was my dream.",
+              " And look at that, I get fresh interview stories, a clearer idea of what I want, and no new office coffee machine to learn."
+            ],
+            gloomy: [
+              " And now I get another application portal, another interview outfit, and the thrilling task of explaining this plot twist to my résumé.",
+              " And apparently my career has added a waiting room, a stack of follow-ups, and several weeks of refreshing my inbox like it owes me money.",
+              " And now the opportunity is gone, but the interview replay is working overtime. At least the career detour comes with bonus admin."
+            ]
+          },
+          win: {
+            hopeful: [
+              " And now I get the paycheck, the experience, and a fresh line on my résumé that doesn't require creative writing.",
+              " And look at that, a real career opening, more room to grow, and proof that all those applications weren't just decorative.",
+              " And I get a new title, new options, and the deeply satisfying right to be smug about backing myself."
+            ],
+            gloomy: [
+              " And now come the extra expectations, the new responsibilities, and the discovery that apparently success is just more work wearing a nicer title.",
+              " And I get to prove I deserved it every day, learn everyone's systems, and pretend the expanded calendar is a reward.",
+              " And now I have a career to maintain, a reputation to protect, and absolutely no pressure whatsoever. Obviously."
+            ]
+          },
+          other: {
+            hopeful: [" And at least I get a paycheck, useful experience, and a clearer idea of what I want next.", " And look at that, I get a routine, new skills, and the option to make my next career move with actual information.", " And I get to collect experience while quietly keeping an eye out for the next interesting opportunity."],
+            gloomy: [" And now I get deadlines, meetings, and a calendar that has apparently started making decisions for me.", " And naturally there are office politics, inboxes, and a fresh chance to wonder whether 'quick task' has ever meant quick.", " And I get to learn another system, remember everyone's name, and discover how many things fit under 'one small favor.'"]
+          }
+        },
+        school: {
+          setback: {
+            hopeful: [" And apparently I get a very specific map of what to study next, plus another shot at a grade that doesn't get to decide my whole future.", " And now I know which chapter deserves my attention, and I still have time to change the ending before finals. Annoying feedback; useful timing.", " And look at that, extra practice, a clearer study plan, and one less illusion that a single test can measure an entire brain."],
+            gloomy: [" And now this grade gets to loom over the next assignment, the next exam, and every ambitious plan I made before checking the syllabus.", " And apparently I get extra studying, less free time, and the uncertainty of whether I understood anything at all. One test, carrying the atmosphere of a disciplinary hearing.", " And now my study schedule has collapsed into emergency revision, and the textbook has the nerve to still be the same length."]
+          },
+          win: {
+            hopeful: [" And now I get the grade, the options it opens, and the deeply satisfying right to be smug about all those study hours.", " And apparently the work paid off: more doors open, future plans look less imaginary, and I can enjoy a result I actually earned.", " And I get to carry this win into the next class or application—and enjoy one evening without negotiating with a textbook."],
+            gloomy: [" And now everyone expects me to keep getting results like this, so naturally the next exam has become a sequel with a bigger budget.", " And the reward for doing well is harder material, higher expectations, and no excuse to relax. Education: the gift that keeps assigning homework.", " And now I have a reputation to maintain and a future decision to overthink. One good grade has apparently raised the bar permanently."]
+          },
+          other: {
+            hopeful: [" And at least I get the knowledge, the credit, and one more step toward whatever I decide to do next.", " And look at that, I get new skills and a qualification that might open a door I haven't even looked for yet.", " And apparently all that studying has made the next class, project, or opportunity slightly less mysterious."],
+            gloomy: [" And now there's another reading list, another deadline, and a calendar that thinks sleep is optional.", " And naturally this course has a sequel, a prerequisite, and a group project waiting around the corner.", " And I get to learn one thing while discovering three new things I apparently should already know."]
+          }
+        },
+        projects: {
+          setback: {
+            hopeful: [" And apparently I get another pass at the project, a clearer idea of what needs fixing, and the chance to make the final version look intentional.", " And now I know where the plan got ambitious, so I can trim the unnecessary bits and spend the effort on what actually matters.", " And at least I caught the weak spot before calling it finished. Revision: the glamorous part where the project gets better and my schedule gets worse."],
+            gloomy: [" And now the deadline, the unfinished parts, and the follow-up messages get to share one very crowded corner of my brain.", " And apparently I get to redo the work, explain the delay, and watch the project grow a second task list.", " And there goes the neat plan, replaced by revisions, reminders, and the suspicious feeling that I underestimated every step."]
+          },
+          win: {
+            hopeful: [" And I get a finished project, something concrete to show for the effort, and the right to stop thinking about it for at least one evening.", " And apparently the work is done, the result exists outside my head, and I can move on to something that doesn't need a progress update.", " And now I get the finished version, the useful experience, and a little space on my calendar where this project used to live."],
+            gloomy: [" And now people have seen the finished project, which means they can have opinions, request changes, and ask what I'm doing next.", " And apparently finishing one project has made room for another project. The task list has reproduced.", " And now I have to maintain the result, present it, or explain why the next version won't be ready tomorrow."]
+          },
+          other: {
+            hopeful: [" And apparently I get to shape the idea, pick up a useful skill, and make something that wasn't there before.", " And I get a clear goal, a reason to organize my thoughts, and the satisfying moment when all the pieces finally look like one project.", " And now I have room to build this into something useful, and a good excuse to protect a little time for it."],
+            gloomy: [" And now the project has scope, deadlines, revisions, and the thrilling question of whether I remembered every small detail.", " And apparently I get to keep track of the files, the changes, and which version was actually the final one.", " And now there's a plan to maintain, a result to defend, and an inevitable request to make one tiny change."]
+          }
+        },
+        relationships: {
+          setback: {
+            hopeful: [" And apparently I have been released from decoding mixed signals; my evenings and my self-respect can both get their own calendar back.", " And now I get more time for my friends and fewer opportunities to reread one text like it contains the meaning of life. Heartbreak: rude, but excellent at clearing an overbooked schedule.", " And I can stop auditioning for a relationship that wasn't meeting me halfway. My weekends are back, and so is the chance to remember what I actually like doing."],
+            gloomy: [" And now every song, restaurant, and mutual friend gets promoted to an unwanted reminder. Excellent, the breakup has acquired a marketing campaign.", " And apparently I get free humiliation, a highlight reel of things I wish I'd said, and the exciting prospect of explaining it to people who absolutely will ask.", " And now I have to rebuild my routines while avoiding places that have apparently become emotionally significant for no reason. One breakup, several bonus inconveniences."]
+          },
+          other: {
+            hopeful: [" And look at that, I get company, shared jokes, and someone to split the boring errands with. Disgustingly convenient.", " And I get a person to share the good bits with, plus a reason to make plans that aren't just me and my laundry pile.", " And apparently I get affection, backup, and someone who might actually remember what I said last week."],
+            gloomy: [" And now I have someone else's feelings to consider, plans to coordinate, and the terrifying possibility that this might actually matter to me.", " And there goes the peaceful simplicity of making every decision alone. Now I have to communicate, share the good snacks, and risk getting attached. Horrifying.", " And suddenly a nice thing has stakes: expectations, calendars, and enough vulnerability to make a person miss being emotionally unavailable."]
+          }
+        },
+        travel: {
+          setback: {
+            hopeful: [" And apparently I got free cardio, a story for later, and an unplanned tour of the station. My transportation plan has become an activity.", " And I get bonus exercise and a reminder that the day can survive one missed connection, even if my timetable is now mostly decorative.", " And at least I have a story, a few extra steps, and the privilege of appreciating the next seat I get to sit in."],
+            gloomy: [" And now the schedule is wobbling, I'm arriving flustered, and the next connection gets to decide how much more of my day it wants.", " And naturally I get the late arrival, the sweaty sprint, and the pleasure of watching every carefully planned minute become a suggestion.", " And one missed connection has turned into extra waiting, rearranged plans, and the world's least relaxing tour of the station."]
+          },
+          other: {
+            hopeful: [" And I get there with time to spare, a seat, and the rare pleasure of a plan working without requiring a dramatic sprint.", " And look at that, I made the connection and still have energy left to enjoy the destination. Public transport has briefly earned my respect.", " And I get a smooth trip, a little extra time, and the smug satisfaction of not having to run through a station with my bag bouncing."],
+            gloomy: [" And now I have to trust that the return trip will be this cooperative, which is an ambitious amount of faith to place in a timetable.", " And the trip went smoothly, so naturally I can spend the rest of the day waiting for the catch. A suspiciously functional commute.", " And I made it on time, which has raised expectations for every future connection. Great, now the train has a reputation to maintain."]
+          }
+        },
+        money: {
+          setback: {
+            hopeful: [" And at least I know what that expense actually costs now, which is cheaper than paying for the same surprise twice.", " And apparently this is my cue to rethink the budget, cancel one unnecessary thing, and appreciate the purchases I didn't make.", " And I get a very practical reminder to check the fine print next time, plus the satisfaction of dealing with the problem instead of ignoring it."],
+            gloomy: [" And now the bill gets to visit my budget, my plans, and my mood all at once. Very efficient of it.", " And apparently I get less money, more forms, and the delightful suspense of wondering what else I forgot to account for.", " And now I have to fix the shortfall and pretend the numbers aren't following me around like a tiny accountant."]
+          },
+          win: {
+            hopeful: [" And apparently I get my next paycheck back for my own plans, plus the deeply satisfying ability to look at the balance without flinching.", " And I get more breathing room in the budget and one less monthly charge taking up residence in my brain.", " And look at that, the debt is gone, the interest can stop eating my money, and future-me gets a slightly less annoying spreadsheet."],
+            gloomy: [" And now I have to keep the balance paid off, resist every purchase, and wonder what fresh expense is already walking toward me.", " And apparently being debt-free means I have to become responsible with money forever. A suspiciously long subscription.", " And there goes my favorite excuse for buying things; now every purchase has to survive a budget meeting."]
+          },
+          other: {
+            hopeful: [" And I get a little more room in the budget and the option to spend that money on something I actually care about.", " And apparently I get to enjoy the purchase and cross one more item off the list. Money has briefly done its job.", " And I get a useful upgrade, a little convenience, and one less reason to browse the same options for three more weeks."],
+            gloomy: [" And now I have to keep track of the money, check the balance, and wonder which expense is about to show up next.", " And there goes the money, plus the exciting task of wondering whether I chose the wrong option.", " And now I have a new number to worry about and a fresh opportunity to second-guess what I did with it."]
+          }
+        },
+        home: {
+          setback: {
+            hopeful: [" And at least I found the problem before it turned into an even more expensive surprise. Home ownership: a very hands-on hobby.", " And apparently I get to learn a repair skill, rearrange the room, and finally deal with that thing I've been avoiding.", " And now I get a cleaner space, a fixed problem, and the smug satisfaction of knowing what that weird noise was."],
+            gloomy: [" And now the house has a new repair, a new bill, and apparently a personal interest in my free time.", " And there goes the weekend: one trip for supplies, three trips because I forgot something, and a tutorial that makes it look easy.", " And now I get dust, noise, and the suspicion that fixing one thing has revealed two more things with opinions."]
+          },
+          other: {
+            hopeful: [" And I get a more comfortable space, a little project finished, and the satisfaction of being able to find my own keys.", " And apparently I get to enjoy my home a bit more and stop pretending that pile in the corner is a design choice.", " And I get a fresh room, a working fixture, or at least one fewer thing to mutter about when I walk past."],
+            gloomy: [" And now there's another surface to clean, another thing to maintain, and a home that keeps generating tiny assignments.", " And apparently the house has added chores to my calendar without asking. Bold.", " And now I have to remember where I put the tools, what I meant to fix, and why every home project has a sequel."]
+          }
+        },
+        technology: {
+          setback: {
+            hopeful: [" And at least I get a forced screen break and a chance to discover whether I remember any phone numbers. A bold experiment.", " And apparently I get to clear out old files, fix the settings, and stop pretending that device wasn't overdue for attention.", " And I get a useful troubleshooting story and a reminder to back things up before technology develops another personality."],
+            gloomy: [" And now I get a password reset, a support queue, and the chance to explain the problem to a machine that keeps asking if I tried restarting.", " And apparently the device chose today to become a very expensive paperweight, and my files have joined it for dramatic effect.", " And now I have to troubleshoot, wait, and wonder which update quietly broke the thing that was working yesterday."]
+          },
+          other: {
+            hopeful: [" And look at that, it works, my files are still here, and I can get back to what I was doing before the device demanded praise.", " And I get a working tool, a little time saved, and a brief reminder that technology can occasionally earn its keep.", " And apparently I fixed it myself, so I get the solution and several minutes of feeling like technical support."],
+            gloomy: [" And now I have to keep it updated, charged, connected, and emotionally prepared for the next notification.", " And apparently it works for now, which means I can wait for the next update to move every button somewhere new.", " And I get a functioning device plus the responsibility of remembering passwords I made too complicated to remember."]
+          }
+        },
+        health: {
+          setback: {
+            hopeful: [" And at least I know what needs attention now, and I get to count resting as the assignment instead of an optional extra.", " And apparently this is a chance to slow down, accept help, and stop expecting my body to run like a phone on one percent.", " And I get a clearer next step and permission to rearrange the day around feeling better. Deeply inconvenient, oddly sensible."],
+            gloomy: [" And now I get appointments, waiting rooms, and the suspense of whether the next instruction will involve paperwork or another appointment.", " And apparently my body has submitted a complaint, and the resolution process includes rest, scheduling, and not knowing the timeline.", " And there goes the plan, plus the energy it takes to explain why the plan has gone. Health: very inconsiderate admin."]
+          },
+          other: {
+            hopeful: [" And I get to enjoy feeling better, appreciate the boring little things, and stop treating a normal day like it came free.", " And apparently taking care of myself has paid off: more energy, fewer interruptions, and a body willing to cooperate for once.", " And I get a little more room for plans, movement, and all the ordinary things that are nicer when they don't require effort."],
+            gloomy: [" And now that I feel fine, I have to maintain it, schedule things, and avoid tempting fate by saying so out loud.", " And apparently feeling better means people can start expecting me to do things again. The recovery has generated a workload.", " And I get to wonder how long this lasts and whether every small ache deserves a full investigation."]
+          }
+        },
+        food: {
+          setback: {
+            hopeful: [" And apparently I get an excuse to try something else and take an actual break instead of eating the same thing on autopilot.", " And now I get to pick up something I like, stretch my legs, and pretend this was a very deliberate lunch plan.", " And at least I learned what to remember next time, and I get to enjoy a different snack today."],
+            gloomy: [" And now I have to find a replacement meal, spend money I wasn't planning to spend, and reorganize the part of the day that depended on lunch.", " And apparently lunch has become a separate errand, plus the inconvenience of being hungry while I solve it.", " And now I have to improvise food, adjust the schedule, and remember the lunch I left behind like a tiny edible betrayal."]
+          },
+          other: {
+            hopeful: [" And I get a good meal, a small moment of joy, and a reason to consider seconds. Finally, a plan with immediate benefits.", " And apparently the recipe worked, the groceries had a purpose, and I get to feel smug about feeding myself.", " And I get to enjoy this while it's hot and remember that a decent meal can rescue a surprisingly large part of a day."],
+            gloomy: [" And now I have to buy the ingredients again, wash the dishes, and wonder why the recipe used three pans.", " And apparently dinner was good, which means the next meal has a lot to live up to. A completely unnecessary standard.", " And I get a full stomach and the looming dishes, because even a successful meal insists on paperwork."]
+          }
+        },
+        pets: {
+          setback: {
+            hopeful: [" And at least I caught the problem and can give my pet the care they need, even if they repay me by acting personally offended.", " And now I get to focus on making things comfortable, ask for help, and appreciate every tail wag or purr like the tiny miracle it is.", " And apparently the little menace has made me more observant, more patient, and very familiar with the vet's appointment system."],
+            gloomy: [" And now I'm worried about my pet, checking every little thing, and trying to decode a creature that refuses to explain the situation.", " And apparently this means a vet visit, a bill, and my pet acting completely normal the second we get there.", " And now the carrier is out, everyone is stressed, and the household's smallest member has somehow taken over the schedule."]
+          },
+          other: {
+            hopeful: [" And I get unconditional enthusiasm, a walking buddy, and someone who thinks my return from the next room is major news.", " And apparently I have a tiny housemate, a ridiculous number of photos, and a daily reminder to take a break and go outside.", " And I get companionship, comic relief, and the privilege of being loved by someone with absolutely no respect for my furniture."],
+            gloomy: [" And now I'm responsible for another schedule, another appetite, and a creature who will absolutely wake me up at the worst possible time.", " And apparently all my belongings are now communal property, especially the ones my pet has never been allowed to touch.", " And I get to worry about food, walks, and mysterious noises from a creature who cannot file a status report."]
+          }
+        },
+        creative: {
+          setback: {
+            hopeful: [" And apparently I get a useful lesson in materials, a chance to try the idea again, and a very avant-garde result that saves me from making the exact same thing twice.", " And now I get to experiment with another technique, make room for a new idea, and call this one an artistic detour with a straight face.", " And at least I made something, learned what didn't work, and have a story for the next time someone says handmade things are easy."],
+            gloomy: [" And now the supplies, the time, and the idea have all gone into producing a mistake with my name on it.", " And apparently I get to start over, replace what broke, and watch the project grow a sequel nobody requested.", " And there goes the class, the materials, and the finished piece I was supposed to have. Creativity has submitted an invoice."]
+          },
+          other: {
+            hopeful: [" And I get something I made myself, a new skill, and the smug little satisfaction of having an actual hobby.", " And apparently I get to keep learning, make the next one better, and own something no shop has an identical copy of.", " And I get a finished project, a reason to clear some space, and proof that my free time can produce more than scrolling."],
+            gloomy: [" And now I have to keep practicing, buy more supplies, and find somewhere to put the things I make. The hobby has developed overhead.", " And apparently making one good thing means I have to make another one, slightly better, while comparing it to professionals online.", " And now my relaxing hobby has goals, equipment, and a growing pile of evidence that I started another project."]
+          }
+        },
+        sports: {
+          setback: {
+            hopeful: [" And apparently I get a clear idea of what to practice, a reason to show up again, and a much better story than an effortless win.", " And now I know what needs work, and I get another chance to improve without having to defend an undefeated record.", " And at least I got the workout, the team story, and a very specific target for next time."],
+            gloomy: [" And now the missed shot gets to replay in my head while the next game approaches with absolutely no respect for my recovery time.", " And apparently I get sore muscles, a loss, and the honor of remembering every moment I could have done better.", " And now I have to practice, face the team, and pretend the scoreboard didn't make that decision public."]
+          },
+          other: {
+            hopeful: [" And I get the win, the team celebration, and a story that will be retold with slightly more impressive details every time.", " And apparently practice paid off, the team gets bragging rights, and I get to enjoy being right about putting in the effort.", " And I get a great game, a better mood, and the deeply satisfying right to check the score one more time."],
+            gloomy: [" And now everyone expects a repeat performance, and the next opponent has probably seen the score too. Excellent, the stakes have booked a sequel.", " And apparently winning means more practice, more pressure, and teammates who will never let me forget one mistake next time.", " And I get to enjoy this win while worrying about how difficult it will be to top. Relaxation has been postponed."]
+          }
+        },
+        plans: {
+          setback: {
+            hopeful: [" And apparently I get an unexpectedly free evening, no need to rush, and a chance to make a better plan with people I actually want to see.", " And now I get my time back, a quieter night, and the luxury of not having to pretend I was excited about the logistics.", " And at least the empty spot in my schedule leaves room for a different plan, a proper meal, or absolutely nothing."],
+            gloomy: [" And now the plans are gone, the timing is awkward, and I have to decide whether to salvage the day or just be annoyed at it.", " And apparently I get a rescheduling thread, a half-empty evening, and the delightful question of whether anyone else is going to make a plan.", " And there goes the thing I was looking forward to, plus the effort of acting like the cancellation didn't rearrange my whole mood."]
+          },
+          other: {
+            hopeful: [" And I get a good memory, a reason to leave the house, and something to look forward to when the week gets dull again.", " And apparently I get to enjoy the event and the story afterward. My calendar has finally contributed something besides reminders.", " And I get people, food, music, or at least a change of scenery. A suspiciously decent use of an evening."],
+            gloomy: [" And now I have to get ready, coordinate timing, and spend the next day recovering from having had a nice time.", " And apparently this event has a schedule, social expectations, and an outfit decision. Fun has acquired admin.", " And now I have plans to look forward to and the possibility that something will run late, cost extra, or involve small talk."]
+          }
+        },
+        other: {
+          setback: {
+            hopeful: [
+              " And apparently I get a chance to change the plan, save some time, and stop giving this one annoying outcome the whole day.",
+              " And now I know one way this doesn't work, get a story for later, and have room to try a different approach.",
+              " And look at that, I get a forced pause, a little perspective, and time for something I would have kept postponing."
+            ],
+            gloomy: [
+              " And now I get the cleanup, the follow-up, and the charming uncertainty of what else this inconvenience might affect. Bonus admin, naturally.",
+              " And apparently this has made the next step harder, the timing worse, and my to-do list more confident than ever.",
+              " And I get the original hassle, the sequel, and the privilege of wondering whether I missed another detail. A very generous bundle."
+            ]
+          },
+          other: {
+            hopeful: [
+              " And apparently I get a little more confidence, a story for later, and proof that the effort wasn't completely decorative.",
+              " And I get to enjoy the result, keep the useful part, and add one more experience to the collection. Look at me, accumulating a life.",
+              " And now there's a new option, a bit of momentum, and at least one reason to be pleased with how this turned out."
+            ],
+            gloomy: [
+              " And now I have expectations to live up to, details to maintain, and a sequel to worry about before anyone asked for one.",
+              " And apparently this comes with follow-up tasks, possible complications, and the responsibility of not jinxing the part that went right.",
+              " And now I get to wonder what it means, how long it lasts, and what fresh task will arrive to keep me humble."
+            ]
+          }
+        }
+      };
+
+      const resultType = isSetback ? "setback" : "other";
+      const outcomeType = isWin ? "win" : resultType;
+      const group = variations[topic];
+      const outcome = group[outcomeType] || group[resultType] || group.other;
+      const options = outcome[perspective];
+      return output + options[hash % options.length];
+    }
+
+    function showResult() {
+      if (rewriteButton.disabled) return;
+      resultText.textContent = transform(input.value, mode);
+      result.classList.add("visible");
+      result.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+
+    function updateCount() {
+      const words = wordCount(input.value);
+      count.textContent = `${words} / ${MAX_WORDS} words`;
+      count.classList.toggle("over", words > MAX_WORDS);
+      rewriteButton.disabled = words === 0 || words > MAX_WORDS;
+    }
+
+    function setMode(nextMode) {
+      mode = nextMode;
+      const isHopeful = mode === "hopeful";
+      document.body.classList.toggle("gloomy", !isHopeful);
+      hopefulTab.setAttribute("aria-pressed", String(isHopeful));
+      gloomyTab.setAttribute("aria-pressed", String(!isHopeful));
+      document.querySelector("#mood-icon").textContent = isHopeful ? "☀" : "☁";
+      document.querySelector("#weather").textContent = isHopeful ? "☀" : "☁";
+      document.querySelector("#button-icon").textContent = isHopeful ? "↗" : "↘";
+      document.querySelector("#button-label").textContent = "Rephrase";
+      document.querySelector("#result-heading").textContent = isHopeful ? "Optimistic rephrase" : "Pessimistic rephrase";
+      document.querySelector("meta[name='theme-color']").content = isHopeful ? "#fff8e9" : "#191d28";
+      result.classList.remove("visible");
+    }
+
+    input.addEventListener("input", updateCount);
+    rewriteButton.addEventListener("click", showResult);
+    hopefulTab.addEventListener("click", () => setMode("hopeful"));
+    gloomyTab.addEventListener("click", () => setMode("gloomy"));
+    document.querySelector("#example").addEventListener("click", () => {
+      input.value = "I didn't get the job I wanted.";
+      updateCount();
+      showResult();
+    });
+    document.querySelector("#copy").addEventListener("click", async (event) => {
+      try {
+        await navigator.clipboard.writeText(resultText.textContent);
+        event.currentTarget.textContent = "Copied!";
+        window.setTimeout(() => { event.currentTarget.textContent = "Copy text"; }, 1600);
+      } catch (error) {
+        event.currentTarget.textContent = "Copy unavailable";
+        window.setTimeout(() => { event.currentTarget.textContent = "Copy text"; }, 2000);
+      }
+    });
+  </script>
+</body>
+</html>
